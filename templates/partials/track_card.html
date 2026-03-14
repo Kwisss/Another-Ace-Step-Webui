@@ -1,0 +1,61 @@
+<!-- Completed track card — minimal: meta chips, play → bottom player, link → detail page -->
+<div class="track-card">
+  <div class="track-card-header">
+    {% if track.image_path %}
+    <img src="/static/covers/{{ track.image_path }}" style="width: 75px; height: 75px; border-radius: 4px; object-fit: cover; margin-right: 1rem;">
+    {% else %}
+    <div id="cover-pending-{{ track.task_id }}"
+         style="width: 48px; height: 48px; border-radius: 4px; background: var(--bg-surface-2); flex-shrink: 0; margin-right: 1rem;"
+         hx-get="/tracks/{{ track.task_id }}/cover-img"
+         hx-trigger="every 3s"
+         hx-target="this"
+         hx-swap="outerHTML"
+         hx-push-url="false">
+    </div>
+    {% endif %}
+    <div style="flex:1; min-width:0">
+<!-- Keep your existing title/prompt here -->
+      <div class="track-card-title">{{ track.title }}</div>
+      <div class="track-card-prompt">{{ track.prompt }}</div>
+    </div>
+    <!-- Like button -->
+    <button class="like-btn {% if track.liked %}active{% endif %}"
+            hx-post="/tracks/{{ track.id }}/like"
+            hx-target="this"
+            hx-swap="outerHTML"
+            hx-push-url="false">
+      {% if track.liked %}♥{% else %}♡{% endif %}
+    </button>
+  </div>
+
+  <!-- Metadata chips -->
+  <div class="track-card-meta">
+    {% if track.duration %}
+    <span class="meta-chip">{{ track.duration | duration }}</span>
+    {% endif %}
+    {% if track.bpm %}
+    <span class="meta-chip">{{ track.bpm }} BPM</span>
+    {% endif %}
+    {% if track.key_scale %}
+    <span class="meta-chip">{{ track.key_scale }}</span>
+    {% endif %}
+    {% if track.time_signature %}
+    <span class="meta-chip">{{ track.time_signature }}/4</span>
+    {% endif %}
+  </div>
+
+  <!-- Actions row -->
+  <div class="track-card-actions">
+    {% if track.audio_path %}
+    <button class="btn-primary" style="width:auto; margin-top:0; padding:0.45rem 1rem; font-size:0.8rem"
+            hx-get="/player/{{ track.task_id }}"
+            hx-target="#player-bar"
+            hx-swap="innerHTML"
+            hx-push-url="false">▷ Play</button>
+    {% endif %}
+    <a href="/tracks/{{ track.id }}"
+       class="btn-sm"
+       hx-select="#main-content"
+       hx-push-url="true">View details →</a>
+  </div>
+</div>

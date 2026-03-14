@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+{% block title_extra %} — {{ playlist.name }}{% endblock %}
+
+{% block content %}
+<div class="playlist-detail-header">
+  <div class="playlist-cover">≡</div>
+  <div class="playlist-detail-info">
+    <div class="playlist-type">Playlist</div>
+    <h1>{{ playlist.name }}</h1>
+    {% if playlist.description %}
+    <div class="meta">{{ playlist.description }}</div>
+    {% endif %}
+    <div class="meta" style="margin-top:0.3rem">
+      {{ tracks | length }} track{% if tracks | length != 1 %}s{% endif %}
+    </div>
+    <div class="playlist-detail-actions">
+      <form method="post" action="/playlists/{{ playlist.id }}/delete"
+            onsubmit="return confirm('Delete this playlist?')">
+        <button type="submit" class="btn-danger">Delete playlist</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% if tracks %}
+<table class="track-table">
+  <thead>
+    <tr>
+      <th class="col-num">#</th>
+      <th>Title</th>
+      <th>BPM</th>
+      <th>Key</th>
+      <th class="col-dur">Duration</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for track in tracks %}
+    <tr id="track-row-{{ track.id }}">
+      <td class="col-num">{{ loop.index }}</td>
+      <td class="col-title">
+        <div class="t-name">{{ track.title }}</div>
+        <div class="t-prompt">{{ track.prompt }}</div>
+      </td>
+      <td class="col-meta">{{ track.bpm or '—' }}</td>
+      <td class="col-meta">{{ track.key_scale or '—' }}</td>
+      <td class="col-dur">{{ track.duration | duration }}</td>
+      <td class="col-actions">
+        <div class="actions-row">
+		  <!-- Play -->
+          {% if track.audio_path %}
+          <button class="btn-sm"
+                  hx-get="/player/{{ track.task_id }}?playlist_id={{ playlist.id }}"
+                  hx-target="#player-bar"
+                  hx-swap="innerHTML"
+                  hx-push-url="false">▷</button>
+          {% endif %}
+
+          <!-- Like -->
+          <button class="like-btn {% if track.liked %}active{% endif %}"
+                  hx-post="/tracks/{{ track.id }}/like"
+                  hx-target="this"
+                  hx-swap="outerHTML"
+                  hx-push-url="false">
+            {% if track.liked %}♥{% else %}♡{% endif %}
+          </button>
+
+          <!-- Remove from this playlist -->
+          <button class="btn-danger"
+                  hx-post="/tracks/{{ track.id }}/remove-from-playlist/{{ playlist.id }}"
+                  hx-target="#track-row-{{ track.id }}"
+                  hx-swap="outerHTML"
+                  hx-push-url="false">Remove</button>
+        </div>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% else %}
+<div class="empty-state" style="margin-top:3rem">
+  <div class="empty-icon">≡</div>
+  <p>No tracks in this playlist yet.<br>Add them from the Library.</p>
+</div>
+{% endif %}
+{% endblock %}

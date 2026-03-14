@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ACE-Step UI{% block title_extra %}{% endblock %}</title>
+  <!-- Preconnect so font requests start immediately -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap">
+  <link rel="stylesheet" href="/static/style.css">
+  <!-- HTMX -->
+  <script src="https://unpkg.com/htmx.org@1.9.12" defer></script>
+</head>
+<body hx-boost="true" hx-target="#main-content" hx-swap="outerHTML">
+
+<!-- ── Sidebar ───────────────────────────────────────────── -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-mark">♩</div>
+    <span class="logo-text">ACE-STEP</span>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-section-label">Studio</div>
+    <a href="/" class="nav-item {% if page == 'generate' %}active{% endif %}"
+       hx-select="#main-content" hx-push-url="true">
+      <span class="nav-icon">⬡</span> Generate
+    </a>
+    <a href="/remix" class="nav-item {% if page == 'remix' %}active{% endif %}"
+       hx-select="#main-content" hx-push-url="true">
+      <span class="nav-icon">◨</span> Remix
+    </a>
+    <a href="/inpaint" class="nav-item {% if page == 'inpaint' %}active{% endif %}"
+       hx-select="#main-content" hx-push-url="true">
+      <span class="nav-icon">◫</span> Inpaint
+    </a>
+    
+    <a href="/library" class="nav-item {% if page == 'library' %}active{% endif %}"
+       hx-select="#main-content" hx-push-url="true">
+      <span class="nav-icon">◫</span> Library
+    </a>
+    <a href="/lora" class="nav-item {% if page == 'lora' %}active{% endif %}"
+       hx-select="#main-content" hx-push-url="true">
+      <span class="nav-icon">◈</span> Models / LoRA
+    </a>
+  </div>
+
+  <hr class="sidebar-divider">
+
+  <div class="sidebar-section">
+    <div class="sidebar-section-label">Collection</div>
+    <a href="/library?liked=true" class="nav-item {% if page == 'liked' %}active{% endif %}"
+       hx-select="#main-content" hx-push-url="true">
+      <span class="nav-icon">♥</span> Liked
+    </a>
+    <a href="/playlists" class="nav-item {% if page == 'playlists' %}active{% endif %}"
+       hx-select="#main-content" hx-push-url="true">
+      <span class="nav-icon">≡</span> Playlists
+    </a>
+  </div>
+
+  {% if playlists %}
+  <hr class="sidebar-divider">
+  <div class="sidebar-playlists">
+    <div class="sidebar-section-label" style="padding-left:0.5rem">Your Playlists</div>
+    {% for pl in playlists %}
+    <a href="/playlists/{{ pl.id }}" class="playlist-nav-item"
+       hx-select="#main-content" hx-push-url="true">
+      <span class="pli">▷</span>
+      {{ pl.name }}
+    </a>
+    {% endfor %}
+  </div>
+  {% endif %}
+</aside>
+
+<!-- ── Main Content ──────────────────────────────────────── -->
+<main class="main" id="main-content">
+  {% block content %}{% endblock %}
+</main>
+
+<!-- ── Bottom Player ────────────────────────────────────── -->
+<div class="player-bar" id="player-bar" hx-boost="false">
+  <span class="player-empty">// no track selected</span>
+</div>
+
+<script>
+  // ── Nav active state ───────────────────────────────────
+  // Sidebar is outside #main-content so it never gets re-rendered by HTMX.
+  // We update active classes manually after every navigation.
+  function updateActiveNav() {
+    const path = window.location.pathname;
+    const search = window.location.search;
+    document.querySelectorAll('.nav-item').forEach(el => {
+      const href = el.getAttribute('href');
+      if (!href) return;
+      const [hPath, hSearch] = href.split('?');
+      let active = false;
+      if (href === '/') {
+        active = path === '/';
+      } else if (hSearch) {
+        // e.g. /library?liked=true — match path AND query
+        active = path === hPath && search.includes(hSearch);
+      } else {
+        active = path === hPath || path.startsWith(hPath + '/');
+      }
+      el.classList.toggle('active', active);
+    });
+  }
+
+  // Run on first load and after every HTMX navigation
+  updateActiveNav();
+  document.addEventListener('htmx:afterSettle', updateActiveNav);
+
+  // ── Player: pause old before swap, play new after ──────
+  document.addEventListener('htmx:beforeSwap', function(evt) {
+    if (evt.detail.target && evt.detail.target.id === 'player-bar') {
+      const audio = document.querySelector('#player-bar audio');
+      if (audio) { audio.pause(); audio.src = ''; }
+    }
+  });
+
+  // ── Form persistence ──
+  function getStoreKey() {
+    const p = window.location.pathname;
+    if (p.includes('remix'))   return 'acestep_remix_v1';
+    if (p.includes('inpaint')) return 'acestep_inpaint_v1';
+    return 'acestep_gen_v1';
+  }
+
+  // Explicit lists keyed by element *id* (not form name — these can differ).
+  // Any new field added to the form should also be added here.
+  var PERSIST_TEXT = [
+    'title', 'cover_art', 'prompt', 'lyrics',
+    'audio_code_string', 'audio_duration', 'bpm', 'key_scale',
+    'time_signature', 'vocal_language', 'batch_size', 'inference_steps',
+    'guidance_scale', 'shift', 'seed', 'audio_format',
+    'lm_temperature', 'lm_cfg_scale', 'lm_top_k', 'lm_top_p', 'lm_repetition_penalty',
+    // remix-specific fields (ignored when not present)
+    'audio_cover_strength', 'cover_noise_strength',
+    // inpaint-specific fields (ignored when not present)
+    'repainting_start', 'repainting_end',
+    // conditioning scales
+    'caption_scale', 'lyrics_scale', 'llm_codes_scale', 'audio_influence_scale',
+  ];
+  var PERSIST_CHECK = ['thinking', 'use_cot_caption', 'use_cot_language', 'chunk_mask_explicit'];
+
+  function saveForm() {
+    const form = document.getElementById('gen-form');
+    if (!form) return;
+    const data = {};
+    PERSIST_TEXT.forEach(function(id) {
+      const el = document.getElementById(id);
+      if (el && el.type !== 'file') data[id] = el.value;
+    });
+    PERSIST_CHECK.forEach(function(id) {
+      const el = document.getElementById(id);
+      if (el) data[id] = el.checked;
+    });
+    try { localStorage.setItem(getStoreKey(), JSON.stringify(data)); } catch(e) {}
+  }
+
+  function restoreForm() {
+    if (window.location.search.includes('prefill=')) return;
+    const form = document.getElementById('gen-form');
+    if (!form) return;
+    let data;
+    try { data = JSON.parse(localStorage.getItem(getStoreKey()) || 'null'); } catch(e) {}
+    if (!data) return;
+
+    PERSIST_TEXT.forEach(function(id) {
+      const el = document.getElementById(id);
+      if (!el || el.type === 'file') return;
+      if (data[id] !== undefined) el.value = data[id];
+    });
+    PERSIST_CHECK.forEach(function(id) {
+      const el = document.getElementById(id);
+      if (el && data[id] !== undefined) el.checked = !!data[id];
+    });
+
+    // Re-fire input events so dependent UI logic (e.g. Thinking toggle) updates
+    ['audio_code_string', 'audio_cover_strength', 'cover_noise_strength'].forEach(function(id) {
+      const el = document.getElementById(id);
+      if (el) el.dispatchEvent(new Event('input'));
+    });
+  }
+
+  document.addEventListener('htmx:afterSettle', function(evt) {
+    if (evt.detail.target && evt.detail.target.id === 'main-content') {
+      restoreForm();
+      const formEl = document.getElementById('gen-form');
+      if (formEl) {
+        formEl.addEventListener('input', saveForm);
+        formEl.addEventListener('change', saveForm);
+      }
+    }
+  });
+
+  document.addEventListener('DOMContentLoaded', function() {
+    restoreForm();
+    const formEl = document.getElementById('gen-form');
+    if (formEl) {
+      formEl.addEventListener('input', saveForm);
+      formEl.addEventListener('change', saveForm);
+    }
+  });
+  // ── Spacebar → player toggle ───────────────────────────
+  // Without this, spacebar activates whatever button last had focus
+  // (e.g. the Play button), restarting the track instead of pausing.
+  document.addEventListener('keydown', function(e) {
+    if (e.code !== 'Space') return;
+    // Let spacebar work normally inside text inputs / textareas
+    const tag = document.activeElement && document.activeElement.tagName.toLowerCase();
+    if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+    const audio = document.querySelector('#player-bar audio');
+    if (!audio) return;
+    e.preventDefault();
+    if (audio.paused) { audio.play(); } else { audio.pause(); }
+    // Blur the focused element so subsequent spacebar hits keep hitting audio
+    if (document.activeElement) document.activeElement.blur();
+  });
+
+  function autoResizeTextarea(el) {
+    el.style.height = 'auto';
+    el.style.height = (el.scrollHeight) + 'px';
+  }
+  document.addEventListener('input', function(e) {
+    if (e.target.tagName.toLowerCase() === 'textarea') {
+      autoResizeTextarea(e.target);
+    }
+  });
+
+  // ── Inject Clear Buttons for Files & Textareas ─────────
+  function setupClearButtons() {
+    const targets = document.querySelectorAll('textarea, input[type="file"]');
+    targets.forEach(el => {
+      // Don't double wrap
+      if (el.parentElement.classList.contains('input-wrap')) return;
+      
+      const wrapper = document.createElement('div');
+      wrapper.className = 'input-wrap' + (el.type === 'file' ? ' file-wrap' : '');
+      el.parentNode.insertBefore(wrapper, el);
+      wrapper.appendChild(el);
+
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'clear-input-btn';
+      btn.innerHTML = '✕';
+      btn.title = 'Clear input';
+      
+      btn.onclick = function(e) {
+        e.preventDefault();
+        el.value = '';
+        if (el.tagName.toLowerCase() === 'textarea') {
+          el.style.height = 'auto'; // reset height
+        }
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+        if (typeof saveForm === 'function') saveForm();
+      };
+      
+      wrapper.appendChild(btn);
+      
+      // Auto-resize textareas on load
+      if (el.tagName.toLowerCase() === 'textarea') {
+        setTimeout(() => autoResizeTextarea(el), 10);
+      }
+    });
+  }
+
+  document.addEventListener('htmx:afterSettle', setupClearButtons);
+  document.addEventListener('DOMContentLoaded', setupClearButtons);
+</script>
+</body>
+</html>

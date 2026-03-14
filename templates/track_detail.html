@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+
+{% block title_extra %} — {{ track.title }}{% endblock %}
+
+{% block content %}
+<div class="page-header track-detail-header-row">
+  
+  <!-- Left Side: Cover Art and Title Info -->
+  <div style="display:flex; gap: 1.5rem; align-items: center">
+    {% if track.image_path %}
+    <img src="/static/covers/{{ track.image_path }}" style="width: 140px; height: 140px; border-radius: 8px; object-fit: cover; box-shadow: 0 4px 12px rgba(0,0,0,0.5);">
+    {% endif %}
+    <div>
+      <div style="font-family:var(--mono); font-size:0.65rem; letter-spacing:0.12em; color:var(--text-faint); text-transform:uppercase; margin-bottom:0.4rem">Track</div>
+      <h1 class="page-title" style="margin-bottom:0.25rem">{{ track.title }}</h1>
+      <p class="page-subtitle">{{ track.created_at | date }}</p>
+    </div>
+  </div>
+
+  <!-- Right Side: Action Buttons -->
+  <div class="track-detail-actions">
+    {% if track.audio_path %}
+    <button class="btn-primary track-detail-play"
+            hx-get="/player/{{ track.task_id }}"
+            hx-target="#player-bar"
+            hx-swap="innerHTML"
+            hx-push-url="false">▷ Play</button>
+    {% endif %}
+
+    <a class="btn-sm"
+       href="/?prefill={{ track.id }}"
+       hx-get="/?prefill={{ track.id }}"
+       hx-target="#main-content"
+       hx-select="#main-content"
+       hx-push-url="true">Generate Similar</a>
+
+    <div class="track-detail-icon-btns">
+      <button class="like-btn {% if track.liked %}active{% endif %}"
+              hx-post="/tracks/{{ track.id }}/like"
+              hx-target="this"
+              hx-swap="outerHTML"
+              hx-push-url="false">
+        {% if track.liked %}♥{% else %}♡{% endif %}
+      </button>
+      {% if track.audio_path %}
+      <a class="btn-sm" href="/tracks/{{ track.id }}/download" hx-boost="false" title="Download">↓</a>
+      {% endif %}
+    </div>
+  </div>
+  
+</div> <!-- !!! THIS WAS THE MISSING CLOSING DIV !!! -->
+
+<div class="track-detail-layout">
+
+  <!-- ── Left: meta + playlists ─────────────────────────────── -->
+  <div>
+    <!-- Metadata -->
+    <div class="form-card" style="margin-bottom:1.25rem">
+      <div class="form-card-title">Metadata</div>
+
+      <div class="detail-meta-grid">
+        <div class="detail-meta-row">
+          <span class="detail-meta-label">BPM</span>
+          <span class="detail-meta-value">{{ track.bpm or '—' }}</span>
+        </div>
+        <div class="detail-meta-row">
+          <span class="detail-meta-label">Key</span>
+          <span class="detail-meta-value">{{ track.key_scale or '—' }}</span>
+        </div>
+        <div class="detail-meta-row">
+          <span class="detail-meta-label">Time Sig.</span>
+          <span class="detail-meta-value">{% if track.time_signature %}{{ track.time_signature }}/4{% else %}—{% endif %}</span>
+        </div>
+        <div class="detail-meta-row">
+          <span class="detail-meta-label">Duration</span>
+          <span class="detail-meta-value">{{ track.duration | duration }}</span>
+        </div>
+        <div class="detail-meta-row">
+          <span class="detail-meta-label">Created</span>
+          <span class="detail-meta-value">{{ track.created_at | date }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Playlists -->
+    {% if playlists %}
+    <div class="form-card">
+      <div class="form-card-title">Add to Playlist</div>
+      <div style="display:flex; gap:0.5rem; align-items:center">
+        <select name="playlist_id" id="detail-pl-select" style="flex:1; font-size:0.82rem">
+          {% for pl in playlists %}
+          <option value="{{ pl.id }}">{{ pl.name }}</option>
+          {% endfor %}
+        </select>
+        <button class="btn-sm"
+                hx-post="/tracks/{{ track.id }}/add-to-playlist"
+                hx-include="#detail-pl-select"
+                hx-target="#detail-toast"
+                hx-swap="innerHTML"
+                hx-push-url="false">+ Add</button>
+        <span id="detail-toast" class="toast-inline"></span>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- ── Right: prompt + lyrics ───────────────────────────── -->
+  <div>
+    <div class="form-card" style="margin-bottom:1.25rem">
+      <div class="form-card-title">Style / Caption</div>
+      <p style="font-size:0.875rem; color:var(--text-muted); line-height:1.6">{{ track.prompt }}</p>
+    </div>
+
+    {% if track.lyrics %}
+    <div class="form-card">
+      <div class="form-card-title">Lyrics</div>
+      <pre class="lyrics-pre">{{ track.lyrics }}</pre>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}

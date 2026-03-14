@@ -1,0 +1,92 @@
+--- START OF FILE lora.html ---
+
+{% extends "base.html" %}
+
+{% block title_extra %} — LoRA Manager{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">// models & adapters</h1>
+  <p class="page-subtitle">Load LoRAs to alter style and voice</p>
+</div>
+
+<!-- Removed 'generate-layout' and 'max-width' to allow full width -->
+<div style="width: 100%; margin-bottom: 2rem;">
+
+  <div class="form-card">
+    <div class="form-card-title">Load LoRA</div>
+    <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1.5rem; line-height: 1.5;">
+      LoRAs are "set and forget" adapters. Once loaded, they will affect all subsequent generations (text-to-music and remix) until you restart the server or load a different model.
+    </p>
+
+    <form hx-post="/lora/load"
+          hx-target="#lora-status"
+          hx-swap="innerHTML"
+          hx-indicator="#loading-ind">
+      
+      <!-- Path Input - Full Width -->
+      <div class="form-group">
+        <label class="form-label" for="lora_path">LoRA File Path (.safetensors)</label>
+        <div class="input-wrap">
+          <input type="text" name="lora_path" id="lora_path" 
+                 placeholder="/home/user/models/my_style.safetensors" 
+                 style="font-family: var(--mono); font-size: 0.85rem; width: 100%;" 
+                 required>
+        </div>
+        <div class="form-hint">
+            Must be the absolute path on the server/PC running ACE-Step. 
+            <span style="color:var(--accent); cursor:pointer;" onclick="navigator.clipboard.readText().then(t => document.getElementById('lora_path').value = t)">[Paste from Clipboard]</span>
+        </div>
+      </div>
+
+      <!-- Settings Row -->
+      <div class="form-row" style="display: flex; gap: 2rem; margin-top: 1.5rem;">
+        
+        <div class="form-group" style="flex: 1;">
+          <label class="form-label" for="strength">Strength</label>
+          <div style="display: flex; gap: 1rem; align-items: center;">
+            <input type="range" name="strength" id="strength" 
+                   value="1.0" min="0.0" max="2.0" step="0.05" style="flex:1"
+                   oninput="document.getElementById('str_val').innerText = this.value">
+            <span id="str_val" style="font-family: var(--mono); font-size: 1rem; font-weight: bold; width: 40px; text-align: right;">1.0</span>
+          </div>
+          <div class="form-hint">0.0 = Off, 1.0 = Standard, >1.0 = Strong effect</div>
+        </div>
+
+        <div class="form-group" style="flex: 1;">
+          <label class="form-label" for="adapter_name">Adapter Name (Internal ID)</label>
+          <input type="text" name="adapter_name" id="adapter_name" value="custom_adapter" placeholder="e.g. anime_v1">
+        </div>
+      </div>
+
+      <button type="submit" class="btn-primary" style="margin-top: 1.5rem; padding: 0.75rem 1.5rem; font-size: 1rem;">
+        <span id="loading-ind" class="htmx-indicator">⟳ </span>Load LoRA
+      </button>
+
+    </form>
+    
+    <!-- Status Response Area -->
+    <div id="lora-status" style="margin-top: 1.5rem;"></div>
+
+  </div>
+
+</div>
+
+<script>
+  // Simple local storage memory so you don't have to re-type the path every time
+  document.addEventListener('DOMContentLoaded', function() {
+    const savedPath = localStorage.getItem('acestep_lora_path');
+    if(savedPath) document.getElementById('lora_path').value = savedPath;
+    
+    const savedName = localStorage.getItem('acestep_lora_name');
+    if(savedName) document.getElementById('adapter_name').value = savedName;
+  });
+
+  document.querySelector('form').addEventListener('submit', function() {
+    const p = document.getElementById('lora_path').value;
+    const n = document.getElementById('adapter_name').value;
+    localStorage.setItem('acestep_lora_path', p);
+    localStorage.setItem('acestep_lora_name', n);
+  });
+</script>
+{% endblock %}

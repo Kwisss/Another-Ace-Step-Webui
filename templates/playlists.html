@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title_extra %} — Playlists{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">// playlists</h1>
+  <p class="page-subtitle">{{ playlists | length }} playlist{% if playlists | length != 1 %}s{% endif %}</p>
+</div>
+
+<div class="playlists-grid">
+
+  {% for pl in playlists %}
+  <a href="/playlists/{{ pl.id }}" class="playlist-card">
+    <div class="playlist-card-icon">≡</div>
+    <div class="playlist-card-name">{{ pl.name }}</div>
+    {% if pl.description %}
+    <div class="playlist-card-desc">{{ pl.description }}</div>
+    {% endif %}
+    <div class="playlist-card-count">{{ pl.track_count }} track{% if pl.track_count != 1 %}s{% endif %}</div>
+  </a>
+  {% endfor %}
+
+  <!-- Create new -->
+  <div class="create-playlist-card"
+       onclick="document.getElementById('new-playlist-form').toggleAttribute('hidden')"
+       id="create-btn">
+    <span style="font-size:1.5rem">+</span>
+    <span>New Playlist</span>
+  </div>
+
+</div>
+
+<!-- Inline create form -->
+<div id="new-playlist-form" hidden style="margin-top:1.5rem; max-width:400px">
+  <form class="inline-form"
+        method="post" action="/playlists">
+    <div class="form-card-title">New Playlist</div>
+
+    <div class="form-group">
+      <label class="form-label" for="pl-name">Name</label>
+      <input type="text" name="name" id="pl-name"
+             placeholder="My playlist…" required autofocus>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="pl-desc">Description <span class="text-muted">(optional)</span></label>
+      <input type="text" name="description" id="pl-desc"
+             placeholder="Chill Sunday sessions…">
+    </div>
+
+    <div class="inline-form-row">
+      <button type="submit" class="btn-primary">Create</button>
+      <button type="button" class="cancel-btn"
+              onclick="document.getElementById('new-playlist-form').setAttribute('hidden','')">
+        Cancel
+      </button>
+    </div>
+  </form>
+</div>
+
+{% if not playlists %}
+<div class="empty-state" style="margin-top:3rem">
+  <div class="empty-icon">≡</div>
+  <p>No playlists yet — create one above!</p>
+</div>
+{% endif %}
+{% endblock %}

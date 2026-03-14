@@ -1,0 +1,21 @@
+<!-- New: A table row equivalent of the progress card for the Library page -->
+<tr class="progress-row"
+    hx-get="/status/{{ track.task_id if track else task_id }}?view=row"
+    hx-trigger="every 2s"
+    hx-target="this"
+    hx-swap="outerHTML"
+    hx-push-url="false"
+    style="background: var(--bg-surface-2);">
+  <td class="col-num" style="color: var(--text-faint);">⟳</td>
+  <td colspan="7" style="padding: 1rem 0.5rem;">
+    <div style="display: flex; align-items: center; gap: 1rem;">
+      <div class="progress-dot"></div>
+      <div style="flex: 1; min-width: 0;">
+        <div style="font-weight: 600; font-size: 0.85rem; color: var(--text-main);">{{ label | default('GENERATING...') }}</div>
+        <div class="t-prompt" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color: var(--text-muted);">
+          {{ track.prompt if track else prompt }}
+        </div>
+      </div>
+    </div>
+  </td>
+</tr>

@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+
+{% block title_extra %} — Library{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">// library</h1>
+  <p class="page-subtitle">{{ total }} track{% if total != 1 %}s{% endif %}{% if total_pages > 1 %} &nbsp;·&nbsp; page {{ cur_page }} / {{ total_pages }}{% endif %}</p>
+</div>
+
+<!-- Search + filters -->
+<div class="search-bar">
+  <!-- The Form targets main-content AND selects main-content -->
+  <form style="display:contents"
+        hx-get="/library" 
+        hx-target="#main-content" 
+        hx-select="#main-content" 
+        hx-push-url="true">
+    
+    <!-- Keep current sorting and liked status when searching -->
+    <input type="hidden" name="sort" value="{{ sort }}">
+    <input type="hidden" name="order" value="{{ order }}">
+    <input type="hidden" name="page" value="1">
+    {% if liked_only %}<input type="hidden" name="liked" value="true">{% endif %}
+
+    <input type="search" name="q" id="library-search-input" value="{{ search }}"
+           placeholder="Search tracks…"
+           hx-get="/library"
+           hx-trigger="input changed delay:300ms, search"
+           hx-include="closest form"
+           hx-target="#main-content"
+           hx-select="#main-content"
+           hx-swap="outerHTML"
+           hx-replace-url="true">
+    <button type="submit" class="btn-sm">Search</button>
+  </form>
+
+  <!-- Liked button also targets and selects main-content -->
+  <a href="/library?q={{ search }}&sort={{ sort }}&order={{ order }}{% if not liked_only %}&liked=true{% endif %}"
+     hx-get="/library?q={{ search }}&sort={{ sort }}&order={{ order }}{% if not liked_only %}&liked=true{% endif %}"
+     hx-target="#main-content"
+     hx-select="#main-content"
+     hx-push-url="true"
+     class="filter-toggle {% if liked_only %}active{% endif %}">
+    ♥ Liked only
+  </a>
+</div>
+
+{% if tracks %}
+<table class="track-table">
+  <thead>
+    <tr>
+      <th class="col-num">#</th>
+      <th>
+        <a href="/library?q={{search}}&liked={{liked_only}}&sort=title&order={{'desc' if sort=='title' and order=='asc' else 'asc'}}&page=1" hx-select="#main-content" hx-push-url="true" class="sortable-header">
+          Title {% if sort == 'title' %}{{ '↑' if order == 'asc' else '↓' }}{% endif %}
+        </a>
+      </th>
+      <th>
+        <a href="/library?q={{search}}&liked={{liked_only}}&sort=bpm&order={{'desc' if sort=='bpm' and order=='asc' else 'asc'}}&page=1" hx-select="#main-content" hx-push-url="true" class="sortable-header">
+          BPM {% if sort == 'bpm' %}{{ '↑' if order == 'asc' else '↓' }}{% endif %}
+        </a>
+      </th>
+      <th>
+        <a href="/library?q={{search}}&liked={{liked_only}}&sort=key_scale&order={{'desc' if sort=='key_scale' and order=='asc' else 'asc'}}&page=1" hx-select="#main-content" hx-push-url="true" class="sortable-header">
+          Key {% if sort == 'key_scale' %}{{ '↑' if order == 'asc' else '↓' }}{% endif %}
+        </a>
+      </th>
+      <th class="col-dur">
+        <a href="/library?q={{search}}&liked={{liked_only}}&sort=duration&order={{'desc' if sort=='duration' and order=='asc' else 'asc'}}&page=1" hx-select="#main-content" hx-push-url="true" class="sortable-header">
+          Duration {% if sort == 'duration' %}{{ '↑' if order == 'asc' else '↓' }}{% endif %}
+        </a>
+      </th>
+      <th>
+        <a href="/library?q={{search}}&liked={{liked_only}}&sort=created_at&order={{'asc' if sort=='created_at' and order=='desc' else 'desc'}}&page=1" hx-select="#main-content" hx-push-url="true" class="sortable-header">
+          Created {% if sort == 'created_at' %}{{ '↑' if order == 'asc' else '↓' }}{% endif %}
+        </a>
+      </th>
+      <th>
+        <a href="/library?q={{search}}&liked={{liked_only}}&sort=listens&order={{'asc' if sort=='listens' and order=='desc' else 'desc'}}&page=1" hx-select="#main-content" hx-push-url="true" class="sortable-header">
+          Listens {% if sort == 'listens' %}{{ '↑' if order == 'asc' else '↓' }}{% endif %}
+        </a>
+      </th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for track in tracks %}
+      {% if track.status == 'complete' %}
+        {% include 'partials/track_row.html' %}
+      {% else %}
+        {% include 'partials/progress_row.html' %}
+      {% endif %}
+    {% endfor %}
+  </tbody>
+</table>
+
+{% else %}
+<div class="empty-state">
+  <div class="empty-icon">◫</div>
+  <p>{% if search %}No tracks matching "{{ search }}"{% elif liked_only %}No liked tracks yet{% else %}No tracks yet — generate some!{% endif %}</p>
+</div>
+{% endif %}
+
+{% if total_pages > 1 %}
+{%- set _base = '/library?q=' ~ search ~ '&liked=' ~ liked_only ~ '&sort=' ~ sort ~ '&order=' ~ order ~ '&page=' -%}
+{%- set _win = 2 -%}
+<nav class="pagination" aria-label="Page navigation">
+  {# Prev #}
+  {% if cur_page > 1 %}
+  <a class="pg-btn" href="{{ _base }}{{ cur_page - 1 }}" hx-select="#main-content" hx-push-url="true">‹</a>
+  {% else %}
+  <span class="pg-btn pg-disabled">‹</span>
+  {% endif %}
+
+  {# Always show page 1 #}
+  <a class="pg-btn {% if cur_page == 1 %}pg-active{% endif %}" href="{{ _base }}1" hx-select="#main-content" hx-push-url="true">1</a>
+
+  {# Left ellipsis #}
+  {% if cur_page - _win > 2 %}
+  <span class="pg-ellipsis">…</span>
+  {% endif %}
+
+  {# Window around current page #}
+  {% for p in range(2, total_pages) %}
+    {% if p >= cur_page - _win and p <= cur_page + _win %}
+  <a class="pg-btn {% if p == cur_page %}pg-active{% endif %}" href="{{ _base }}{{ p }}" hx-select="#main-content" hx-push-url="true">{{ p }}</a>
+    {% endif %}
+  {% endfor %}
+
+  {# Right ellipsis #}
+  {% if cur_page + _win < total_pages - 1 %}
+  <span class="pg-ellipsis">…</span>
+  {% endif %}
+
+  {# Always show last page #}
+  {% if total_pages > 1 %}
+  <a class="pg-btn {% if cur_page == total_pages %}pg-active{% endif %}" href="{{ _base }}{{ total_pages }}" hx-select="#main-content" hx-push-url="true">{{ total_pages }}</a>
+  {% endif %}
+
+  {# Next #}
+  {% if cur_page < total_pages %}
+  <a class="pg-btn" href="{{ _base }}{{ cur_page + 1 }}" hx-select="#main-content" hx-push-url="true">›</a>
+  {% else %}
+  <span class="pg-btn pg-disabled">›</span>
+  {% endif %}
+</nav>
+{% endif %}
+{% endblock %}

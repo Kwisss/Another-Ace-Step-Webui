@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+
+{% block title_extra %} — Remix{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">// remix & in-paint</h1>
+  <p class="page-subtitle">Cover and modify existing tracks</p>
+</div>
+
+<div class="generate-layout">
+
+  <!-- ── Form ─────────────────────────────────────────────── -->
+  <div class="form-card">
+    <div class="form-card-title">Remix Settings</div>
+    <form id="gen-form"
+          hx-post="/generate"
+          hx-target="#queue-list"
+          hx-swap="afterbegin"
+          hx-push-url="false"
+          hx-disabled-elt="button[type=submit]"
+          enctype="multipart/form-data">
+
+      <input type="hidden" name="task_type" value="cover">
+
+      <div class="form-group">
+        <label class="form-label" for="title">Working Title (optional)</label>
+        <input type="text" name="title" id="title" placeholder="e.g. My Remix">
+      </div>
+
+      <details open>
+        <summary>Audio Inputs</summary>
+        <div class="form-group">
+          <label class="form-label" for="src_audio">Source Audio (Canvas)</label>
+          <input type="file" name="src_audio" id="src_audio" accept="audio/*" required>
+          <div class="form-hint">The base track you want to remix or cover.</div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="audio_cover_strength">Cover Strength (Noise)</label>
+          <div style="display: flex; gap: 1rem; align-items: center;">
+            <input type="range" name="audio_cover_strength" id="audio_cover_strength" value="1.0" min="0.0" max="1.0" step="0.05" style="flex:1"
+                   oninput="document.getElementById('str_val').innerText = this.value">
+            <span id="str_val" style="font-family: var(--mono); font-size: 0.85rem; width: 30px;">1.0</span>
+          </div>
+          <div class="form-hint">Lower values (e.g. 0.2) keep more original structure. 1.0 completely replaces it.</div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="cover_noise_strength">Cover Noise Strength</label>
+          <div style="display: flex; gap: 1rem; align-items: center;">
+            <input type="range" name="cover_noise_strength" id="cover_noise_strength" value="0.0" min="0.0" max="1.0" step="0.05" style="flex:1"
+                   oninput="document.getElementById('noise_str_val').innerText = this.value">
+            <span id="noise_str_val" style="font-family: var(--mono); font-size: 0.85rem; width: 30px;">0.0</span>
+          </div>
+        </div>
+      </details>
+
+      <details open>
+        <summary>Prompt & Lyrics</summary>
+        <div class="form-group">
+          <label class="form-label" for="cover_art">Cover Art</label>
+          <select name="cover_art" id="cover_art">
+            <option value="algorithmic" selected>Algorithmic Neon</option>
+            <option value="picsum">Picsum (Random Photo)</option>
+            <option value="none">None</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="prompt">Prompt / Caption</label>
+          <textarea name="prompt" id="prompt" rows="3" placeholder="e.g. upbeat indie rock remix" required></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="lyrics">Lyrics</label>
+          <textarea name="lyrics" id="lyrics" rows="4"></textarea>
+        </div>
+      </details>
+
+      <details>
+        <summary>Structure & Style Transfer</summary>
+
+        <div class="form-group">
+          <label class="form-label" for="reference_audio">Reference Audio (Style Transfer)</label>
+          <input type="file" name="reference_audio" id="reference_audio" accept="audio/*">
+          <div class="form-hint">Controls timbre, instruments, and vibe.</div>
+        </div>
+
+        <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.5rem 0;">
+
+        <div class="form-group">
+          <label class="form-label" for="extract_audio">Analyze / Extract</label>
+          <input type="file" name="extract_audio" id="extract_audio" accept="audio/*">
+          <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem; flex-direction: column; align-items: flex-start;">
+            <button type="button" class="btn-sm extract-btn"
+                    hx-post="/extract_codes"
+                    hx-encoding="multipart/form-data"
+                    hx-include="#extract_audio"
+                    hx-target="#extract-indicator"
+                    hx-swap="outerHTML"
+                    onclick="this.disabled=true;document.querySelectorAll('.extract-btn').forEach(b=>b.disabled=true)">
+              Extract Audio Codes
+            </button>
+            <button type="button" class="btn-sm extract-btn"
+                    hx-post="/extract_metadata"
+                    hx-encoding="multipart/form-data"
+                    hx-include="#extract_audio"
+                    hx-target="#extract-indicator"
+                    hx-swap="outerHTML"
+                    onclick="this.disabled=true;document.querySelectorAll('.extract-btn').forEach(b=>b.disabled=true)">
+              Extract Track Metadata
+            </button>
+            <span id="extract-indicator" style="font-size: 0.85rem; margin-top: 0.25rem;"></span>
+          </div>
+          <div class="form-hint">Upload an audio file to extract raw structure (codes) or musical metadata (BPM, key, prompt).</div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="audio_code_string">Audio Codes (Sheet Music)</label>
+          <textarea name="audio_code_string" id="audio_code_string" rows="3" placeholder="e.g. 123,456,789..."></textarea>
+          <div class="form-hint">Controls melody and structure. Disables LM Thinking if provided.</div>
+        </div>
+      </details>
+
+      {% include 'partials/form_musical_metadata.html' %}
+
+      {% include 'partials/form_engine_settings.html' %}
+
+      {% include 'partials/form_llm_settings.html' %}
+
+      <button type="submit" class="btn-primary" style="margin-top: 1rem;">
+        <span class="htmx-indicator">⟳ </span>Remix Track
+      </button>
+    </form>
+  </div>
+
+  <!-- ── Mini Library ──────────────────────────────────── -->
+  {% include 'partials/mini_library.html' %}
+
+</div>
+
+{% include 'partials/form_shared_script.html' %}
+{% endblock %}

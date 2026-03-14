@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+
+{% block title_extra %} — Generate{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">// generate</h1>
+  <p class="page-subtitle">Create music with ACE-Step 1.5</p>
+</div>
+
+<div class="generate-layout">
+
+  <!-- ── Form ─────────────────────────────────────────────── -->
+  <div class="form-card">
+    <div class="form-card-title">New Track</div>
+    <form id="gen-form"
+          hx-post="/generate"
+          hx-target="#queue-list"
+          hx-swap="afterbegin"
+          hx-push-url="false"
+          hx-disabled-elt="button[type=submit]"
+          enctype="multipart/form-data">
+
+      <input type="hidden" name="task_type" value="text2music">
+
+      <div class="form-group">
+        <label class="form-label" for="title">Working Title (optional)</label>
+        <input type="text" name="title" id="title" placeholder="e.g. My Song">
+      </div>
+
+      <details open>
+        <summary>Main Inputs</summary>
+        <div class="form-group">
+          <label class="form-label" for="cover_art">Cover Art</label>
+          <select name="cover_art" id="cover_art">
+            <option value="algorithmic" selected>Algorithmic Neon</option>
+            <option value="picsum">Picsum (Random Photo)</option>
+            <option value="none">None</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="prompt">Prompt / Caption</label>
+          <textarea name="prompt" id="prompt" rows="3"
+            placeholder="e.g. upbeat indie rock with driving guitar, punchy drums and male vocals, energetic verse"
+            required></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="lyrics">Lyrics</label>
+          <textarea name="lyrics" id="lyrics" rows="5"
+            placeholder="[Verse]
+Your lyrics here..."></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="audio_cover_strength">Guidance Strength</label>
+          <div class="slider-row">
+            <input type="range" name="audio_cover_strength" id="audio_cover_strength" value="1.0" min="0.0" max="1.0" step="0.05"
+                   oninput="document.getElementById('gen_gs_val').innerText = parseFloat(this.value).toFixed(2)">
+            <span id="gen_gs_val" class="slider-val">1.00</span>
+          </div>
+          <div class="form-hint">Strength of LM code influence (Thinking), reference audio style, or audio code structure — depending on what inputs are active.</div>
+        </div>
+      </details>
+
+      <details>
+        <summary>Structure & Style Transfer</summary>
+
+        <div class="form-group">
+          <label class="form-label" for="reference_audio">Reference Audio (Style Transfer)</label>
+          <input type="file" name="reference_audio" id="reference_audio" accept="audio/*">
+          <div class="form-hint">Controls timbre, instruments, and vibe.</div>
+        </div>
+
+        <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.5rem 0;">
+
+        <div class="form-group">
+          <label class="form-label" for="extract_audio">Analyze / Extract</label>
+          <input type="file" name="extract_audio" id="extract_audio" accept="audio/*">
+          
+          <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem; flex-direction: column; align-items: flex-start;">
+			<button type="button" class="btn-sm extract-btn"
+					hx-post="/extract_codes"
+					hx-encoding="multipart/form-data"
+					hx-include="#extract_audio"
+					hx-target="#extract-indicator"
+					hx-swap="outerHTML"
+                    onclick="this.disabled=true;document.querySelectorAll('.extract-btn').forEach(b=>b.disabled=true)">
+              Extract Audio Codes
+            </button>
+            <button type="button" class="btn-sm extract-btn"
+                    hx-post="/extract_metadata"
+                    hx-encoding="multipart/form-data"
+                    hx-include="#extract_audio"
+                    hx-target="#extract-indicator"
+                    hx-swap="outerHTML"
+                    onclick="this.disabled=true;document.querySelectorAll('.extract-btn').forEach(b=>b.disabled=true)">
+              Extract Track Metadata
+            </button>
+            <span id="extract-indicator" style="font-size: 0.85rem; margin-top: 0.25rem;"></span>
+          </div>
+          <div class="form-hint">Upload an audio file to extract raw structure (codes) or musical metadata (BPM, key, prompt).</div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="audio_code_string">Audio Codes (Sheet Music)</label>
+          <textarea name="audio_code_string" id="audio_code_string" rows="3" placeholder="e.g. 123,456,789..."></textarea>
+          <div class="form-hint">Controls melody and structure. Disables LM Thinking if provided.</div>
+        </div>
+      </details>
+
+      {% include 'partials/form_musical_metadata.html' %}
+
+      {% include 'partials/form_engine_settings.html' %}
+
+      {% include 'partials/form_llm_settings.html' %}
+
+      <button type="submit" class="btn-primary">
+        <span class="htmx-indicator">⟳ </span>Generate
+      </button>
+    </form>
+  </div>
+
+  <!-- ── Mini Library ──────────────────────────────────── -->
+  {% include 'partials/mini_library.html' %}
+
+</div>
+
+{% include 'partials/form_shared_script.html' %}
+{% endblock %}

@@ -1,0 +1,46 @@
+<details>
+  <summary>LLM Settings</summary>
+  <div class="checkbox-row" id="thinking_wrapper">
+    <input type="checkbox" name="thinking" id="thinking" value="true" checked>
+    <label for="thinking">Use 5Hz LM (Thinking)</label>
+  </div>
+
+  <div class="checkbox-row">
+    <input type="checkbox" name="use_cot_caption" id="use_cot_caption" value="true">
+    <label for="use_cot_caption">Use CoT Caption (enhance prompt)</label>
+  </div>
+
+  <div class="checkbox-row">
+    <input type="checkbox" name="use_cot_language" id="use_cot_language" value="true">
+    <label for="use_cot_language">Use CoT Language (detect language)</label>
+  </div>
+
+  <div class="form-row">
+    <div class="form-group">
+      <label class="form-label" for="lm_temperature">LM Temperature</label>
+      <input type="number" name="lm_temperature" id="lm_temperature" value="0.85" min="0" max="2" step="0.05">
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="lm_cfg_scale">LM CFG Scale</label>
+      <input type="number" name="lm_cfg_scale" id="lm_cfg_scale" value="2.5" min="0" max="3" step="0.1">
+    </div>
+  </div>
+
+  <div class="form-row">
+    <div class="form-group">
+      <label class="form-label" for="lm_top_k">Top-K <span style="font-size:0.75em;opacity:0.6">(0 = off)</span></label>
+      <input type="number" name="lm_top_k" id="lm_top_k" value="0" min="0" max="200" step="1">
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="lm_top_p">Top-P <span style="font-size:0.75em;opacity:0.6">(≥1 = off)</span></label>
+      <input type="number" name="lm_top_p" id="lm_top_p" value="0.9" min="0" max="1" step="0.05">
+    </div>
+  </div>
+
+  <div class="form-row">
+    <div class="form-group">
+      <label class="form-label" for="lm_repetition_penalty">Repetition Penalty</label>
+      <input type="number" name="lm_repetition_penalty" id="lm_repetition_penalty" value="1.0" min="0" max="3" step="0.05">
+    </div>
+  </div>
+</details>

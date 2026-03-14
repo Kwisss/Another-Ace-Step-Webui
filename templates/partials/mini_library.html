@@ -1,0 +1,19 @@
+<div class="queue-col">
+  <div class="queue-header">Recent Tracks</div>
+  <div id="queue-list" style="display: flex; flex-direction: column; gap: 0.75rem;">
+    {% if recent_tracks %}
+      {% for track in recent_tracks %}
+        {% if track.status == 'complete' %}
+          {% include 'partials/track_card.html' %}
+        {% else %}
+          {% include 'partials/progress_card.html' %}
+        {% endif %}
+      {% endfor %}
+    {% else %}
+      <div class="empty-state" style="padding:2rem">
+        <div class="empty-icon" style="font-size:1.5rem">⬡</div>
+        <p>No tracks yet.</p>
+      </div>
+    {% endif %}
+  </div>
+</div>

@@ -1,0 +1,185 @@
+<!-- Swapped into #player-bar when user clicks "▷ Player" -->
+<div class="custom-player-wrapper">
+  
+  <!-- Hidden Audio Element -->
+  <audio id="main-player"
+         preload="auto"
+         src="/audio/{{ track.task_id }}">
+  </audio>
+
+<!-- Left Side: Track Info -->
+  <div class="player-track-info" style="flex: 1; min-width: 0; display: flex !important; flex-direction: row !important; gap: 0.75rem !important; align-items: center !important; height: 100%;">
+    
+    {% if track.image_path %}
+    <img src="/static/covers/{{ track.image_path }}" style="width: 75px; height: 75px; border-radius: 4px; object-fit: cover; flex-shrink: 0; display: block;">
+    {% endif %}
+
+    <div style="display: flex !important; flex-direction: column !important; justify-content: center; min-width: 0; overflow: hidden; line-height: 1.2;">
+      <span class="player-track-name" style="display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 600; font-size: 0.9rem; color: var(--text-main);">
+        {{ track.title }}
+      </span>
+      <span class="player-track-prompt" style="display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.75rem; color: var(--text-muted);">
+        {{ track.prompt }}
+      </span>
+    </div>
+
+  </div>
+
+  <!-- Center: Transport Controls -->
+  <div class="custom-player-controls">
+    
+    <!-- Prev -->
+    <button class="player-ctrl-btn" 
+            {% if prev_id %} hx-get="/player/{{ prev_id }}?{{ qs }}" hx-target="#player-bar" hx-swap="innerHTML" hx-push-url="false" {% else %} disabled {% endif %}>
+      ⏮
+    </button>
+
+    <!-- Play/Pause -->
+    <button class="player-ctrl-btn" id="play-pause-btn">
+      ⏸
+    </button>
+
+    <!-- Next -->
+    <button class="player-ctrl-btn" id="next-track-btn"
+            {% if next_id %} hx-get="/player/{{ next_id }}?{{ qs }}" hx-target="#player-bar" hx-swap="innerHTML" hx-push-url="false" {% else %} disabled {% endif %}>
+      ⏭
+    </button>
+
+    <!-- Timeline / Seek -->
+    <div class="timeline-container">
+      <span id="time-current" class="time-display">0:00</span>
+      
+      <!-- We use the DB duration directly here as the source of truth -->
+      <input type="range" id="seek-bar" class="custom-slider" 
+             value="0" min="0" max="{{ track.duration or 100 }}" step="0.1">
+             
+      <span id="time-total" class="time-display">{{ track.duration | duration }}</span>
+    </div>
+
+  </div>
+
+  <!-- Right Side: Volume & Meta -->
+  <div class="player-right-side">
+    <!-- Volume Control -->
+    <div class="volume-container">
+      <span style="font-size: 0.9rem; color: var(--text-muted)">🔊</span>
+      <input type="range" id="volume-bar" class="custom-slider" value="1" min="0" max="1" step="0.05" style="width: 120px;">
+    </div>
+    
+    <div class="player-meta">
+      {% if track.bpm %}<span>{{ track.bpm }} BPM</span>{% endif %}
+      {% if track.key_scale %}<span>{{ track.key_scale }}</span>{% endif %}
+    </div>
+  </div>
+
+</div>
+
+<script>
+  (function() {
+    var audio = document.getElementById('main-player');
+    var playBtn = document.getElementById('play-pause-btn');
+    var seekBar = document.getElementById('seek-bar');
+    var volBar = document.getElementById('volume-bar');
+    var timeCurrent = document.getElementById('time-current');
+    var timeTotal = document.getElementById('time-total');
+    
+    var listened = false;
+    var isSeeking = false;
+
+    if (!audio) return;
+	// --- Volume ---
+    var savedVol = localStorage.getItem('acestep_volume');
+    if (savedVol !== null) {
+      audio.volume = parseFloat(savedVol);
+      volBar.value = savedVol;
+    }
+    // 2. NOW START PLAYBACK (Safe because volume is already set)
+    var playPromise = audio.play();
+    if (playPromise !== undefined) {
+        playPromise.catch(function(error) {
+            // Auto-play was prevented (e.g. user hasn't interacted with DOM yet)
+            // We update the button to show "Play" state
+            playBtn.innerText = '▶'; 
+        });
+    }
+    // --- Format Time Helper ---
+    function formatTime(seconds) {
+      if (!seconds || isNaN(seconds) || !isFinite(seconds)) return "0:00";
+      var m = Math.floor(seconds / 60);
+      var s = Math.floor(seconds % 60);
+      return m + ":" + (s < 10 ? "0" + s : s);
+    }
+
+    // --- Play/Pause Toggle ---
+    playBtn.addEventListener('click', function() {
+      if (audio.paused) {
+        audio.play();
+      } else {
+        audio.pause();
+      }
+    });
+
+    audio.addEventListener('play', function() { playBtn.innerText = '⏸'; });
+    audio.addEventListener('pause', function() { playBtn.innerText = '▶'; });
+
+    // --- Handle actual duration changes ---
+    // If the browser calculates a slightly different actual duration than the DB, 
+    // we update it seamlessly here.
+    audio.addEventListener('durationchange', function() {
+      if (isFinite(audio.duration) && audio.duration > 0) {
+        seekBar.max = audio.duration;
+        timeTotal.innerText = formatTime(audio.duration);
+      }
+    });
+
+    // --- Time Update (Seek bar & Listen tracking) ---
+    audio.addEventListener('timeupdate', function() {
+      if (!isSeeking) {
+        seekBar.value = audio.currentTime;
+      }
+      timeCurrent.innerText = formatTime(audio.currentTime);
+
+      // Register listen count after 10 seconds
+      if (!listened && audio.currentTime >= 10) {
+        listened = true;
+        htmx.ajax('POST', '/tracks/{{ track.task_id }}/listen', {swap: 'none'});
+      }
+    });
+
+    // --- Seeking ---
+    seekBar.addEventListener('mousedown', function() { isSeeking = true; });
+    seekBar.addEventListener('input', function() {
+      timeCurrent.innerText = formatTime(seekBar.value);
+    });
+    seekBar.addEventListener('mouseup', function() {
+      isSeeking = false;
+      audio.currentTime = seekBar.value;
+    });
+    // For touch devices
+    seekBar.addEventListener('touchstart', function() { isSeeking = true; });
+    seekBar.addEventListener('touchend', function() {
+      isSeeking = false;
+      audio.currentTime = seekBar.value;
+    });
+
+    volBar.addEventListener('input', function() {
+      audio.volume = volBar.value;
+      localStorage.setItem('acestep_volume', volBar.value);
+    });
+
+    // --- Auto-Next & End of Track ---
+    audio.addEventListener('ended', function() {
+      // Snap the visuals to the end so it doesn't look like it stopped early
+      seekBar.value = seekBar.max;
+      timeCurrent.innerText = timeTotal.innerText;
+
+      var nextBtn = document.getElementById('next-track-btn');
+      if (nextBtn && !nextBtn.disabled) {
+        htmx.trigger(nextBtn, 'click');
+      } else {
+        // If it's the very last song in the library, revert to Play button
+        playBtn.innerText = '▶';
+      }
+    });
+  })();
+</script>

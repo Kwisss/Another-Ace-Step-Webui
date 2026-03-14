@@ -1,0 +1,7 @@
+# Python cache
+__pycache__/
+
+# Database and media
+data/acestep.db
+static/audio/
+static/covers/

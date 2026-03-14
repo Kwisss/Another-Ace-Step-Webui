@@ -1,0 +1,101 @@
+<script>
+(function() {
+  // 1. Disable "Thinking" when Audio Codes are provided
+  const codeInput = document.getElementById('audio_code_string');
+  const thinkCheck = document.getElementById('thinking');
+  const thinkWrap = document.getElementById('thinking_wrapper');
+
+  if (codeInput && thinkCheck) {
+    codeInput.addEventListener('input', function() {
+      if (this.value.trim().length > 0) {
+        thinkCheck.checked = false;
+        thinkCheck.disabled = true;
+        thinkWrap.style.opacity = '0.5';
+        thinkWrap.title = 'Disabled because manual Audio Codes are provided';
+      } else {
+        thinkCheck.disabled = false;
+        thinkWrap.style.opacity = '1';
+        thinkWrap.title = '';
+      }
+    });
+  }
+
+  // 2. Prefill for retry / generate similar
+  {% if prefill %}
+  (function() {
+    const track = {{ prefill | tojson | safe }};
+
+    function setVal(id, val) {
+      if (val === null || val === undefined) return;
+      const el = document.getElementById(id);
+      if (el) el.value = val;
+    }
+    function setChecked(id, val) {
+      const el = document.getElementById(id);
+      if (el) el.checked = !!val;
+    }
+
+    setVal('title',           (track.title || '').replace(/ v\d+$/, ''));
+    setVal('cover_art',       track.cover_art || 'algorithmic');
+    setVal('prompt',          track.prompt || '');
+    setVal('lyrics',          track.lyrics || '');
+    setVal('audio_duration',  track.duration != null ? Math.round(track.duration) : '');
+    setVal('bpm',             track.bpm != null ? track.bpm : '');
+    setVal('key_scale',       track.key_scale != null ? track.key_scale : 'auto');
+    setVal('time_signature',  track.time_signature || '');
+    setVal('vocal_language',  track.vocal_language || '');
+    setVal('batch_size',      track.batch_size || 2);
+    setVal('inference_steps', track.inference_steps || 50);
+    setVal('guidance_scale',  track.guidance_scale != null ? track.guidance_scale : 7.0);
+    setVal('shift',           track.shift != null ? track.shift : 3.0);
+    // FIX (issue 3): use seed_value (the actual seed used for THIS track),
+    // not input_seed which may contain all seeds from a batch run e.g. "1024,2048"
+    setVal('seed',            track.seed_value || '-1');
+    setVal('audio_format',    track.audio_format || 'mp3');
+    setVal('lm_temperature',  track.lm_temperature != null ? track.lm_temperature : 0.85);
+    setVal('lm_cfg_scale',    track.lm_cfg_scale   != null ? track.lm_cfg_scale   : 2.5);
+    setVal('lm_top_k',        track.lm_top_k       != null ? track.lm_top_k       : 0);
+    setVal('lm_top_p',        track.lm_top_p       != null ? track.lm_top_p       : 0.9);
+    setVal('lm_repetition_penalty', track.lm_repetition_penalty != null ? track.lm_repetition_penalty : 1.0);
+    setChecked('thinking',         track.thinking);
+    setChecked('use_cot_caption',  track.use_cot_caption);
+    setChecked('use_cot_language', track.use_cot_language);
+
+    // Open all sections so the user can see what was prefilled
+    document.querySelectorAll('details').forEach(function(d) { d.setAttribute('open', ''); });
+
+    // Persist immediately so HTMX navigations away and back don't lose the state
+    if (typeof saveForm === 'function') saveForm();
+  })();
+  {% endif %}
+
+  // 3. Auto-fill form from Deep Analysis / Metadata Extraction
+  document.body.addEventListener("autoFillForm", function(evt) {
+    const data = evt.detail;
+    if (data.prompt) document.getElementById('prompt').value = data.prompt;
+    if (data.bpm) document.getElementById('bpm').value = data.bpm;
+    if (data.key_scale) document.getElementById('key_scale').value = data.key_scale;
+    if (data.time_signature) document.getElementById('time_signature').value = data.time_signature;
+    if (data.audio_duration) document.getElementById('audio_duration').value = data.audio_duration;
+    if (typeof saveForm === 'function') saveForm();
+    // Flash the prompt box so the user notices the auto-fill
+    const promptBox = document.getElementById('prompt');
+    if (promptBox) {
+      promptBox.style.transition = "background-color 0.5s";
+      promptBox.style.backgroundColor = "rgba(0, 255, 136, 0.1)";
+      setTimeout(() => promptBox.style.backgroundColor = "", 1000);
+    }
+  });
+
+  // 4. Paste extracted audio codes into the textarea
+  document.body.addEventListener("codesExtracted", function(evt) {
+    const codes = evt.detail.codes;
+    if (codes) {
+      const el = document.getElementById('audio_code_string');
+      el.value = codes;
+      el.dispatchEvent(new Event('input'));  // triggers thinking-disable + resize
+      if (typeof saveForm === 'function') saveForm();
+    }
+  });
+})();
+</script>

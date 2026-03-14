@@ -1,0 +1,12 @@
+<div class="progress-card"
+     hx-get="/status/{{ track.task_id if track else task_id }}?view=card"
+     hx-trigger="every 2s"
+     hx-target="this"
+     hx-swap="outerHTML"
+     hx-push-url="false">
+  <div class="progress-prompt">{{ track.prompt if track else prompt }}</div>
+  <div class="progress-label">
+    <div class="progress-dot"></div>
+    {{ label | default('GENERATING') }}
+  </div>
+</div>

@@ -1,0 +1,87 @@
+<tr id="track-row-{{ track.id }}">
+  <td class="col-num">{{ loop.index if loop else '•' }}</td>
+  
+  <td class="col-title">
+    <div style="display:flex; align-items:center; gap:0.75rem;">
+      
+      <!-- Play Button Thumbnail -->
+      <div class="thumbnail-wrapper" style="position: relative; width: 70px; height: 70px; flex-shrink: 0; cursor: pointer;"
+           {% if track.audio_path %}
+           hx-get="/player/{{ track.task_id }}?q={{ search }}&liked={{ liked_only }}&sort={{ sort }}&order={{ order }}"
+           hx-target="#player-bar"
+           hx-swap="innerHTML"
+           hx-push-url="false"
+           onmouseenter="this.querySelector('.play-overlay').style.opacity='1'"
+           onmouseleave="this.querySelector('.play-overlay').style.opacity='0'"
+           {% endif %}>
+        
+        {% if track.image_path %}
+        <img src="/static/covers/{{ track.image_path }}" loading="lazy" style="width: 100%; height: 100%; border-radius: 4px; object-fit: cover; display: block;">
+        {% else %}
+        <div style="width: 100%; height: 100%; border-radius: 4px; background: var(--bg-surface-2); display:flex; align-items:center; justify-content:center; color:var(--text-faint); font-size:0.75rem;">♪</div>
+        {% endif %}
+        
+        {% if track.audio_path %}
+        <!-- Dark overlay with play icon that shows on hover -->
+        <div class="play-overlay" style="position: absolute; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; border-radius: 4px; opacity: 0; transition: opacity 0.15s; color: white; font-size: 1.2rem;">
+          ▷
+        </div>
+        {% endif %}
+      </div>
+      
+      <!-- Text Link to Details -->
+      <a href="/tracks/{{ track.id }}" class="track-title-link" hx-select="#main-content" hx-push-url="true" style="min-width:0; text-decoration:none; color:inherit; flex: 1;">
+        <div class="t-name">{{ track.title }}</div>
+        <div class="t-prompt" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ track.prompt }}</div>
+      </a>
+      
+    </div>
+  </td>
+  
+  <td class="col-meta">{{ track.bpm or '—' }}</td>
+  <td class="col-meta">{{ track.key_scale or '—' }}</td>
+  <td class="col-dur">{{ track.duration | duration }}</td>
+  <td class="col-meta">{{ track.created_at | date }}</td>
+  <td class="col-meta">{{ track.listens }}</td>
+  
+  <td class="col-actions">
+    <div class="actions-row">
+      <!-- Play button removed from here to save space! -->
+      
+      <button class="like-btn {% if track.liked %}active{% endif %}"
+              hx-post="/tracks/{{ track.id }}/like"
+              hx-target="this"
+              hx-swap="outerHTML"
+              hx-push-url="false">
+        {% if track.liked %}♥{% else %}♡{% endif %}
+      </button>
+
+      {% if track.audio_path %}
+      <a class="btn-sm" href="/tracks/{{ track.id }}/download" hx-boost="false" title="Download">↓</a>
+      {% endif %}
+      
+      {% if playlists %}
+      <form style="display:contents"
+            hx-post="/tracks/{{ track.id }}/add-to-playlist"
+            hx-target="find .toast-inline"
+            hx-swap="innerHTML"
+            hx-push-url="false">
+        <select name="playlist_id" style="width:120px;font-size:0.75rem;height:28px">
+          {% for pl in playlists %}
+          <option value="{{ pl.id }}">{{ pl.name }}</option>
+          {% endfor %}
+        </select>
+        <button type="submit" class="btn-sm" hx-push-url="false">+</button>
+        <span class="toast-inline"></span>
+      </form>
+      {% endif %}
+      
+      <button class="btn-danger"
+              hx-post="/tracks/{{ track.id }}/delete"
+              hx-target="#track-row-{{ track.id }}"
+              hx-swap="outerHTML"
+              hx-confirm="Delete this track?"
+              hx-push-url="false">✕</button>
+    </div>
+  </td>
+</tr>
