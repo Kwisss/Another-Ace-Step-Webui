@@ -34,7 +34,7 @@ Open http://localhost:3000
 - **Generate** — prompt, lyrics, duration, BPM, thinking mode, seed, inference steps
 - **Remix** — use audio codes or reference audio to remix existing tracks
 - **LoRA Management** — load and configure custom LoRA adapters
-- **SSE progress** — live status via Server-Sent Events for song/remix generation, audio codes extraction, metadata extraction, and cover art updates
+- **Htmx Polling** — status via simple htmx polling for song/remix/inpaint generation, audio codes extraction, metadata extraction, and cover art updates
 - **Library** — browse, search, filter by liked, play in bottom bar
 - **Likes** — toggle ♥ on any track (HTMX in-place swap)
 - **Playlists** — create, manage, add/remove tracks
